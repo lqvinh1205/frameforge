@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>frameforge recolor</title>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script>
+</head>
+<body style="margin:0;background:#000">
+<script type="module">
+import * as io from "/web/lib/io.js";
+import { createRecolor, makeRenderer } from "/web/recolor/recolor.js";
+import { createYuvUnpack, createYuvPack, makeTarget, yuvOk } from "/web/lib/yuv.js";
+
+try {
+  const job = await io.job();
+  const { width: W, height: H } = job;
+  const renderer = makeRenderer(W, H);
+  const rc = createRecolor(W, H, job.hasMask);
+  rc.setConfig(job.config);
+  const yuv = job.pixFmt === "yuv420p";
+  if (yuv && !yuvOk(W, H)) throw new Error(`kích thước ${W}x${H} không dùng được yuv420p`);
+  const unpack = yuv ? createYuvUnpack(renderer, W, H, job.matrix, job.range) : null;
+  const pack = yuv ? createYuvPack(renderer, W, H, job.matrix, job.range) : null;
+  const result = yuv ? makeTarget(W, H) : null;
+  const rgbaOut = yuv ? null : new Uint8Array(W * H * 4);
+
+  let next = io.getFrame("video");
+  let nextMask = job.hasMask ? io.getFrame("mask") : null;
+  let posting = Promise.resolve();
+  let i = 0;
+  for (;; i++) {
+    const T0 = performance.now();
+    const f = await next;
+    if (!f) break;
+    const m = nextMask ? await nextMask : null;
+    const T1 = performance.now();
+    next = io.getFrame("video");              // fetch the next frame while this one renders
+    if (job.hasMask) nextMask = io.getFrame("mask");
+    rc.setTime(job.start + i / job.fps);
+    let out;
+    if (yuv) {
+      rc.useTexture(unpack.run(f));
+      rc.setFrame(null, m);
+      renderer.setRenderTarget(result);
+      renderer.render(rc.scene, rc.camera);
+      renderer.setRenderTarget(null);
+      out = pack.run(result.texture, false);
+    } else {
+      rc.setFrame(f, m);
+      renderer.render(rc.scene, rc.camera);
+      out = io.readPixels(renderer, W, H, rgbaOut);
+    }
+    const T2 = performance.now();
+    await posting;                  // keep frames in order; the upload overlaps the next render
+    posting = io.putFrame(out);     // (putFrame copies `out` into a Blob before returning)
+    if (job.debug && i < 5) console.log(`frame ${i}: wait-in ${(T1 - T0).toFixed(0)}ms gpu ${(T2 - T1).toFixed(0)}ms`);
+  }
+  await posting;
+  await io.done({ frames: i });
+} catch (e) {
+  await io.fail(e);
+}
+</script>
+</body>
+</html>

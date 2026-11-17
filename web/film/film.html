@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>frameforge film</title>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/","@pixiv/three-vrm":"/vrm-lib/three-vrm/lib/three-vrm.module.js"}}</script>
+</head>
+<body style="margin:0;background:#000">
+<script type="module">
+import * as THREE from "three";
+import * as io from "/web/lib/io.js";
+import { createDirector } from "/web/film/director.js";
+import { createYuvPack, makeTarget, yuvOk } from "/web/lib/yuv.js";
+
+try {
+  const job = await io.job();
+  const { width: W, height: H } = job;
+  if (!yuvOk(W, H)) throw new Error(`kích thước ${W}x${H}: chiều rộng phải chia hết cho 4, cao chia hết cho 2`);
+  const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: false });
+  renderer.setPixelRatio(1);
+  renderer.setSize(W, H, false);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // linear HDR target with 4x MSAA; the pack pass encodes to sRGB + yuv420p
+  const target = makeTarget(W, H, THREE.HalfFloatType, { depthBuffer: true, samples: 4 });
+  const pack = createYuvPack(renderer, W, H, "bt709", "tv");
+  const dir = await createDirector(job);
+  const times = job.stills ?? Array.from({ length: job.frames }, (_, i) => i / job.fps);
+  let posting = Promise.resolve();
+  for (let i = 0; i < times.length; i++) {
+    dir.setTime(times[i]);
+    renderer.setRenderTarget(target);
+    renderer.render(dir.scene, dir.camera);
+    renderer.setRenderTarget(null);
+    const out = pack.run(target.texture, true, true);
+    await posting;
+    posting = io.putFrame(out);
+  }
+  await posting;
+  await io.done({ frames: times.length });
+} catch (e) {
+  await io.fail(e);
+}
+</script>
+</body>
+</html>

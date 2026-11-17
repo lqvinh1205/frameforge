@@ -1,0 +1,8 @@
+node_modules/
+.chrome-profile/
+*.mp4
+*.anh.png
+*.luoi.png
+*.so-sanh.png
+* - phu de/
+projects/*/0[2467]_*/

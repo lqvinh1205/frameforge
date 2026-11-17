@@ -1,0 +1,28 @@
+frame  vung            H(do)   S     V
+   60  tuong sang        4.0  0.77  0.86
+   60  tuong bong        2.0  0.91  0.58
+   60  tuong nang        4.0  0.73  0.94
+   60  da tay           19.1  0.40  0.89
+   60  ao den           10.0  0.37  0.14
+   60  quan den        335.0  0.25  0.13
+   60  tran             16.0  0.32  0.79
+   60  san nilon         6.3  0.20  0.71
+  240  tuong             5.7  0.75  0.97
+  240  ghe don           5.7  0.86  0.71
+  240  goi               4.0  0.91  0.65
+  240  ghe luoi         20.0  0.25  0.73
+  240  tranh la          7.0  0.40  0.66
+  240  la cay            7.4  0.86  0.28
+  300  tuong toi       358.0  0.88  0.20
+  300  ong neon        357.7  0.97  0.17
+  300  quang neon      358.0  0.88  0.21
+  300  tran hat sang     1.4  0.91  0.31
+  300  ghe don           0.2  0.95  0.13
+  300  goi               0.0  0.89  0.29
+  300  ghe luoi        342.0  0.17  0.23
+  300  tham            256.7  0.15  0.33
+  415  tuong toi         2.0  0.97  0.28
+  415  ong neon          1.9  0.97  0.35
+  415  tran hat sang     6.0  0.93  0.51
+  415  ghe don           1.9  0.99  0.14
+  415  san bong          1.1  0.51  0.34

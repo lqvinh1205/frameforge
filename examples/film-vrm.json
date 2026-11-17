@@ -1,0 +1,16 @@
+{
+  "title": "VRM test",
+  "format": "9:16",
+  "set": { "wall": "#d8e6f0", "floor": "#b08a64", "light": "day",
+    "props": [ { "type": "shelf", "x": -1.6, "z": -2.9 }, { "type": "plant", "x": 2.0, "z": -2.6 }, { "type": "rug", "x": 0, "z": -0.5, "size": 1.5, "color": "#6d8fc9" } ] },
+  "cast": {
+    "seed": { "name": "Seed", "gender": "f", "model": "Seed-san.vrm", "voice": "af_bella", "x": 0.7 },
+    "an": { "use": "an.json", "x": -0.7 }
+  },
+  "lines": [
+    { "who": "seed", "say": "Hi! I'm a VRM model now.", "action": "wave", "emotion": "happy" },
+    { "who": "an", "say": "Whoa. You look way more detailed than me.", "action": "surprised", "react": { "seed": "laugh" } },
+    { "who": "seed", "say": "Don't worry, you're still cute.", "action": "think", "emotion": "happy" },
+    { "who": "an", "say": "I'll take it!", "action": "jump", "react": { "seed": "clap" } }
+  ]
+}

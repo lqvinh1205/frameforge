@@ -1,0 +1,7 @@
+{
+  "targets": [
+    { "name": "bơ vàng -> xanh bạc hà", "from": 58, "to": 150, "range": [12, 26], "sat": [0.15, 0.3], "satK": 0.9, "valK": 0.95 },
+    { "name": "hoa hồng -> tím", "from": 330, "to": 275, "range": [14, 28], "sat": [0.35, 0.55] }
+  ],
+  "skin": { "hue": [5, 28], "sat": [0.18, 0.7], "val": 0.2 }
+}

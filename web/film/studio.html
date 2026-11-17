@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tạo nhân vật</title>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/","@pixiv/three-vrm":"/vrm-lib/three-vrm/lib/three-vrm.module.js"}}</script>
+<style>
+  :root { --bg:#16181d; --panel:#1f2229; --line:#2e323b; --text:#e6e8ec; --dim:#9aa1ad; --acc:#4fb3ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.4 system-ui, sans-serif; display:flex; height:100vh; overflow:hidden; }
+  #view { flex:1; position:relative; min-width:0; }
+  #view canvas { width:100%; height:100%; display:block; }
+  #acts { position:absolute; left:8px; bottom:8px; right:8px; display:flex; flex-wrap:wrap; gap:4px; }
+  aside { width:340px; background:var(--panel); border-left:1px solid var(--line); overflow-y:auto; padding:12px; }
+  h2 { font-size:14px; margin:4px 0 10px; }
+  .row { display:grid; grid-template-columns:110px 1fr; gap:8px; align-items:center; margin:6px 0; }
+  input[type=text], select { background:#14161b; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:4px 6px; width:100%; }
+  input[type=color] { width:100%; height:26px; border:1px solid var(--line); background:none; border-radius:4px; }
+  button { background:#2b3140; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 9px; cursor:pointer; }
+  button.primary { background:var(--acc); color:#001; border-color:transparent; font-weight:600; }
+  .muted { color:var(--dim); }
+  #lib { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+<div id="view"><div id="acts"></div></div>
+<aside>
+  <h2>Nhân vật mẫu</h2>
+  <div class="muted">Mở nhân vật có sẵn:</div>
+  <div id="lib"></div>
+  <div id="form"></div>
+  <div style="display:flex;gap:6px;margin-top:10px">
+    <button class="primary" id="save">Lưu nhân vật</button>
+    <button id="random">Ngẫu nhiên</button>
+  </div>
+  <div id="msg" class="muted" style="margin-top:8px"></div>
+</aside>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { buildCharacter, pose, DEFAULT_CHARACTER, ACTIONS, EMOTIONS } from "/web/film/character.js";
+import { addLights } from "/web/film/set.js";
+import { loadVrmCharacter, poseVrm } from "/web/film/vrm.js";
+
+const job = await (await fetch("/job")).json();
+let spec = { ...DEFAULT_CHARACTER, ...(job.spec ?? {}) };
+
+const view = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+addLights(scene, { wall: "#c9d6e3" });
+const floor = new THREE.Mesh(new THREE.CircleGeometry(2.2, 48), new THREE.MeshToonMaterial({ color: "#d9dfe6" }));
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+camera.position.set(0.9, 1.5, 4.2);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.05, 0);
+controls.update();
+
+let ch, building = 0;
+const models = await (await fetch("/models")).json();
+async function rebuild() {
+  const my = ++building;
+  const next = spec.model
+    ? await loadVrmCharacter(spec, `/assets/vrm/${encodeURIComponent(spec.model)}`).catch((e) => { msg(`Lỗi VRM: ${e.message}`); return buildCharacter(spec); })
+    : buildCharacter(spec);
+  if (my !== building) return;            // a newer rebuild started meanwhile
+  if (ch) scene.remove(ch);
+  ch = next;
+  scene.add(ch);
+  renderMaterials();
+}
+const msg = (h) => (document.getElementById("msg").innerHTML = h);
+await rebuild();
+
+// preview actions/emotions
+let act = null, actT0 = 0, emotion = "neutral", talkUntil = 0;
+const acts = document.getElementById("acts");
+const btn = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = fn; acts.append(b); };
+btn("nói", () => (talkUntil = performance.now() / 1000 + 2.5));
+ACTIONS.forEach((a) => btn(a, () => { act = a; actT0 = performance.now() / 1000; }));
+EMOTIONS.forEach((e) => btn(`mặt: ${e}`, () => (emotion = e)));
+
+const resize = () => {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+};
+addEventListener("resize", resize);
+resize();
+renderer.setAnimationLoop(() => {
+  const t = performance.now() / 1000;
+  const talking = t < talkUntil;
+  const st = { talk: talking ? Math.abs(Math.sin(t * 11)) * 0.8 : 0, speaking: talking, emotion, phase: 0 };
+  if (act) {
+    st.action = act; st.actionT = t - actT0; st.actionDur = 2;
+    if (st.actionT > 2) act = null;
+  }
+  (ch.userData.isVrm ? poseVrm : pose)(ch, t, st);
+  renderer.render(scene, camera);
+});
+
+// form
+const FIELDS = [
+  ["name", "Tên", "text"], ["model", "Mô hình", ["", ...models]], ["gender", "Giới tính", ["m", "f"]], ["skin", "Màu da", "color"],
+  ["hair", "Màu tóc", "color"], ["hairStyle", "Kiểu tóc", ["short", "long", "bun", "spiky", "bald"]],
+  ["eyes", "Màu mắt", "color"], ["outfit", "Trang phục", ["shirt", "dress"]], ["shirt", "Màu áo", "color"],
+  ["pants", "Màu quần", "color"], ["shoes", "Màu giày", "color"], ["height", "Chiều cao", [0.8, 0.9, 1, 1.1]],
+  ["build", "Dáng người", [0.85, 1, 1.15, 1.3]], ["glasses", "Đeo kính", [false, true]], ["blush", "Má hồng", [false, true]],
+  ["voice", "Giọng (Kokoro)", ["", "am_michael", "am_adam", "am_eric", "am_puck", "af_heart", "af_bella", "af_nicole", "af_sky", "bm_george", "bf_emma"]],
+  ["speed", "Tốc độ nói", [0.9, 1, 1.05, 1.1, 1.2]],
+];
+function renderForm() {
+  const form = document.getElementById("form");
+  form.innerHTML = "";
+  for (const [key, label, type] of FIELDS) {
+    const row = document.createElement("label");
+    row.className = "row";
+    row.innerHTML = `<span>${label}</span>`;
+    let inp;
+    if (Array.isArray(type)) {
+      inp = document.createElement("select");
+      type.forEach((v) => inp.append(new Option(v === "" ? "(theo giới tính)" : String(v), String(v))));
+      inp.value = String(spec[key]);
+    } else {
+      inp = document.createElement("input");
+      inp.type = type;
+      inp.value = spec[key] ?? "";
+    }
+    inp.oninput = () => {
+      let v = inp.value;
+      if (Array.isArray(type) && typeof type[0] === "number") v = +v;
+      if (Array.isArray(type) && typeof type[0] === "boolean") v = v === "true";
+      spec[key] = v;
+      if (key === "model") spec.materialColors = {};
+      if (key !== "name" && key !== "voice" && key !== "speed") rebuild();
+    };
+    row.append(inp);
+    form.append(row);
+  }
+  const mats = document.createElement("div");
+  mats.id = "mats";
+  form.append(mats);
+}
+// VRM: one colour picker per material (hair, clothes...), saved as materialColors
+function renderMaterials() {
+  const box = document.getElementById("mats");
+  if (!box) return;
+  box.innerHTML = "";
+  if (!ch?.userData.isVrm) return;
+  const seen = new Map();
+  ch.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of Array.isArray(o.material) ? o.material : [o.material])
+      if (m?.name && m.color && !seen.has(m.name) && !/outline/i.test(m.name)) seen.set(m.name, m);
+  });
+  if (!seen.size) return;
+  box.innerHTML = `<div class="muted" style="margin-top:8px">Màu từng phần của mô hình VRM:</div>`;
+  for (const [name, m] of seen) {
+    const row = document.createElement("label");
+    row.className = "row";
+    row.innerHTML = `<span title="${name}">${name.length > 16 ? name.slice(0, 15) + "…" : name}</span><input type="color" value="#${m.color.getHexString()}">`;
+    row.lastChild.oninput = (e) => {
+      spec.materialColors = { ...(spec.materialColors ?? {}), [name]: e.target.value };
+      ch.traverse((o) => o.isMesh && [o.material].flat().forEach((mm) => mm?.name === name && mm.color?.set(e.target.value)));
+    };
+    box.append(row);
+  }
+}
+renderForm();
+renderMaterials();
+
+async function loadLib() {
+  const lib = await (await fetch("/list")).json();
+  const box = document.getElementById("lib");
+  box.innerHTML = "";
+  lib.forEach(({ file, spec: s }) => {
+    const b = document.createElement("button");
+    b.textContent = s.name ?? file;
+    b.onclick = () => { spec = { ...DEFAULT_CHARACTER, ...s }; renderForm(); rebuild(); };
+    box.append(b);
+  });
+}
+loadLib();
+
+document.getElementById("save").onclick = async () => {
+  const r = await (await fetch("/save", { method: "POST", body: JSON.stringify(spec, null, 2) })).json();
+  msg(`Đã lưu ${r.saved}<br>Dùng trong kịch bản: <code>"use": "${r.use}"</code>`);
+  loadLib();
+};
+const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+document.getElementById("random").onclick = () => {
+  const hsl = (h, s, l) => "#" + new THREE.Color().setHSL(h, s, l).getHexString();
+  spec = {
+    ...spec,
+    gender: rnd(["m", "f"]), skin: rnd(["#f5d2b8", "#f1c9a5", "#d9a77c", "#a8714d", "#7a4a2e"]),
+    hair: rnd(["#1d1410", "#5a3522", "#c98b3c", "#e8d27a", "#b23a2c", "#3a3a3a"]),
+    hairStyle: rnd(["short", "long", "bun", "spiky"]), shirt: hsl(Math.random(), 0.6, 0.55),
+    pants: hsl(Math.random(), 0.35, 0.3), outfit: rnd(["shirt", "shirt", "dress"]), glasses: Math.random() < 0.3,
+    model: "",
+  };
+  renderForm();
+  rebuild();
+};
+</script>
+</body>
+</html>

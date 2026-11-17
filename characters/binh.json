@@ -1,0 +1,13 @@
+{
+  "name": "Bình",
+  "gender": "f",
+  "skin": "#f5d2b8",
+  "hair": "#5a3522",
+  "hairStyle": "long",
+  "shirt": "#7fc8a9",
+  "outfit": "dress",
+  "pants": "#7fc8a9",
+  "shoes": "#c0603a",
+  "glasses": true,
+  "voice": "af_heart"
+}

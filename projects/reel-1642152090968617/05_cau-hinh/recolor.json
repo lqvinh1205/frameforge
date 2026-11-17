@@ -1,0 +1,117 @@
+{
+  "targets": [
+    {
+      "name": "tuong do -> xanh ngoc (ca chi tiet do trong tranh)",
+      "from": 2,
+      "to": 175,
+      "range": [
+        14,
+        30
+      ],
+      "sat": [
+        0.1,
+        0.3
+      ],
+      "satK": 0.8,
+      "valK": 0.85
+    },
+    {
+      "name": "tuong duoi nang (do cam, sac 16) -> xanh ngoc (chi ban ngay)",
+      "from": 16,
+      "to": 175,
+      "range": [
+        8,
+        14
+      ],
+      "sat": [
+        0.24,
+        0.34
+      ],
+      "satK": 0.8,
+      "valK": 0.9,
+      "when": [
+        [
+          0,
+          10.6
+        ]
+      ],
+      "fade": 0.5
+    },
+    {
+      "name": "ong neon + quang sang -> tim (sau khi tat den, frame 266-274)",
+      "from": 8,
+      "to": 285,
+      "range": [
+        18,
+        32
+      ],
+      "sat": [
+        0.1,
+        0.3
+      ],
+      "val": [
+        0.32,
+        0.7
+      ],
+      "when": [
+        [
+          11.4167,
+          99
+        ]
+      ],
+      "fade": 0.3333
+    },
+    {
+      "name": "anh hat neon nhat tren tran/san -> tim",
+      "from": 8,
+      "to": 285,
+      "range": [
+        18,
+        32
+      ],
+      "sat": [
+        0.04,
+        0.2
+      ],
+      "satMax": [
+        0.35,
+        0.6
+      ],
+      "when": [
+        [
+          11.4167,
+          99
+        ]
+      ],
+      "fade": 0.3333
+    }
+  ],
+  "skin": {
+    "hue": [
+      9,
+      28
+    ],
+    "sat": [
+      0.18,
+      0.62
+    ],
+    "val": 0.2
+  },
+  "mask": {
+    "r": {
+      "mode": "repaint",
+      "hue": 214,
+      "sat": 0.55,
+      "gain": 1.9
+    },
+    "g": {
+      "mode": "person"
+    },
+    "b": {
+      "mode": "hue",
+      "hue": 43,
+      "satK": 0.85,
+      "valK": 1.12
+    }
+  }
+}

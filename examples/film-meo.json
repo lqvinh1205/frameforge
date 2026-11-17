@@ -1,0 +1,138 @@
+{
+  "title": "The Great Cat Escape",
+  "format": "9:16",
+  "voiceEngine": "chatterbox",
+  "set": {
+    "wall": "#F3E3C3",
+    "floor": "#9C7A5B",
+    "light": "day",
+    "props": [
+      {
+        "type": "sofa",
+        "x": -1.5,
+        "z": -2.4,
+        "color": "#6A8CAF"
+      },
+      {
+        "type": "plant",
+        "x": 2.3,
+        "z": -2.6,
+        "color": "#3E8E41"
+      },
+      {
+        "type": "picture",
+        "x": 0,
+        "z": -3.2,
+        "color": "#E0A458"
+      },
+      {
+        "type": "shelf",
+        "x": 1.4,
+        "z": -2.8,
+        "color": "#8B5E3C"
+      },
+      {
+        "type": "box",
+        "x": 0.4,
+        "z": -1.2,
+        "color": "#4B5D3A"
+      }
+    ]
+  },
+  "cast": {
+    "an": {
+      "use": "an.json",
+      "x": -0.8
+    },
+    "binh": {
+      "use": "binh.json",
+      "x": 0.8
+    }
+  },
+  "lines": [
+    {
+      "who": "binh",
+      "say": "An, I'm back! Where's Mochi?",
+      "action": "wave",
+      "emotion": "happy",
+      "react": {
+        "an": "surprised"
+      }
+    },
+    {
+      "who": "an",
+      "say": "Mochi? Great! Totally fine. Like, ninety percent fine.",
+      "action": "shrug",
+      "react": {
+        "binh": "think"
+      }
+    },
+    {
+      "who": "binh",
+      "say": "You said cat-sitting was easy. You were so confident!",
+      "action": "point",
+      "emotion": "angry"
+    },
+    {
+      "who": "an",
+      "say": "I checked under the sofa, the shelf, the fridge...",
+      "action": "think",
+      "emotion": "sad",
+      "shot": "wide",
+      "moveTo": -1.4
+    },
+    {
+      "who": "binh",
+      "say": "The fridge?!",
+      "action": "surprised",
+      "emotion": "surprised",
+      "react": {
+        "an": "shrug"
+      }
+    },
+    {
+      "who": "an",
+      "say": "She vanished at noon! I've been searching all day!",
+      "action": "cry",
+      "emotion": "sad",
+      "react": {
+        "binh": "shake"
+      }
+    },
+    {
+      "who": "binh",
+      "duration": 1.5,
+      "action": "point",
+      "emotion": "surprised",
+      "react": {
+        "an": "surprised"
+      }
+    },
+    {
+      "who": "binh",
+      "say": "An... why is your backpack purring?",
+      "action": "think",
+      "emotion": "surprised",
+      "shot": "close"
+    },
+    {
+      "who": "an",
+      "say": "[gasp] She's been riding with me since breakfast!",
+      "action": "surprised",
+      "emotion": "surprised",
+      "react": {
+        "binh": "laugh"
+      },
+      "shot": "close"
+    },
+    {
+      "who": "binh",
+      "say": "[laugh] Best cat-sitter ever. She never left your side.",
+      "action": "clap",
+      "emotion": "happy",
+      "react": {
+        "an": "laugh"
+      }
+    }
+  ]
+}

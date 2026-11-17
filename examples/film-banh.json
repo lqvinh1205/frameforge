@@ -1,0 +1,32 @@
+{
+  "title": "Who ate the cake?",
+  "format": "9:16",
+  "fps": 30,
+  "set": {
+    "wall": "#f3d9b1",
+    "floor": "#a8794f",
+    "light": "day",
+    "props": [
+      { "type": "sofa", "x": 0, "z": -2.4, "color": "#5b7bb5" },
+      { "type": "table", "x": 0, "z": -1.0 },
+      { "type": "cake", "x": 0.15, "z": -1.0 },
+      { "type": "plant", "x": -2.0, "z": -2.6 },
+      { "type": "lamp", "x": 2.0, "z": -2.6 },
+      { "type": "picture", "x": -0.9, "color": "#e6a1b5" },
+      { "type": "rug", "x": 0, "z": -0.6, "size": 1.6, "color": "#c2524a" }
+    ]
+  },
+  "cast": {
+    "an": { "use": "an.json", "x": -0.75 },
+    "binh": { "use": "binh.json", "x": 0.75 }
+  },
+  "lines": [
+    { "who": "binh", "say": "Okay. Who ate my cake?", "emotion": "angry", "action": "angry" },
+    { "who": "an", "say": "Cake? What cake? I don't even like cake.", "action": "shrug", "react": { "binh": "think" } },
+    { "who": "binh", "say": "You have frosting on your nose.", "action": "point" },
+    { "who": "an", "say": "That's... a new skincare routine.", "emotion": "happy", "action": "think" },
+    { "who": "binh", "action": "cry", "duration": 1.4, "react": { "an": "surprised" } },
+    { "who": "an", "say": "Fine! I'll buy you two cakes. Deal?", "action": "wave", "moveTo": 0.0 },
+    { "who": "binh", "say": "Deal!", "emotion": "happy", "action": "jump", "react": { "an": "laugh" } }
+  ]
+}

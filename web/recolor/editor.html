@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đổi màu video</title>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script>
+<style>
+  :root { --bg:#16181d; --panel:#1f2229; --line:#2e323b; --text:#e6e8ec; --dim:#9aa1ad; --acc:#4fb3ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.4 system-ui, sans-serif; display:flex; height:100vh; overflow:hidden; }
+  #view { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #stage { flex:1; display:flex; align-items:center; justify-content:center; min-height:0; padding:8px; }
+  canvas { max-width:100%; max-height:100%; cursor:crosshair; box-shadow:0 0 0 1px var(--line); }
+  #bar { display:flex; gap:8px; align-items:center; padding:8px 12px; border-top:1px solid var(--line); }
+  #bar input[type=range] { flex:1; }
+  aside { width:360px; background:var(--panel); border-left:1px solid var(--line); overflow-y:auto; padding:12px; }
+  h2 { font-size:14px; margin:4px 0 8px; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:10px; }
+  .row { display:grid; grid-template-columns:92px 1fr 44px; gap:6px; align-items:center; margin:4px 0; }
+  .row span:last-child { text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .sw { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:middle; margin-right:4px; border:1px solid #0006; }
+  button { background:#2b3140; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer; }
+  button.primary { background:var(--acc); color:#001; border-color:transparent; font-weight:600; }
+  .seg button.on { background:var(--acc); color:#001; }
+  input[type=text] { background:#14161b; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:3px 6px; width:100%; }
+  .hue { background:linear-gradient(90deg,red,#ff0,lime,cyan,blue,#f0f,red); height:6px; border-radius:3px; }
+  #status { color:var(--dim); min-height:18px; margin:6px 0; }
+  .muted { color:var(--dim); }
+</style>
+</head>
+<body>
+<div id="view">
+  <div id="stage"><canvas id="c"></canvas></div>
+  <div id="bar">
+    <span id="tlabel" class="muted">0.0s</span>
+    <input id="time" type="range" min="0" max="1" step="0.01" value="0">
+    <div class="seg"><button data-v="0" class="on">Kết quả</button><button data-v="1">Vùng đổi</button><button data-v="2">Gốc</button></div>
+  </div>
+</div>
+<aside>
+  <h2 id="title">Đổi màu</h2>
+  <div class="muted">Click lên video để thêm màu cần đổi. Giữ phím <b>Space</b> để xem bản gốc.</div>
+  <div id="status"></div>
+  <div id="targets"></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+    <button class="primary" id="save">Lưu cấu hình</button>
+    <button id="test">Render thử 5s</button>
+    <button id="full">Render cả video</button>
+  </div>
+  <div id="renderMsg" class="muted" style="margin-top:8px"></div>
+</aside>
+<script type="module">
+import { createRecolor, makeRenderer, normTarget } from "/web/recolor/recolor.js";
+
+const job = await (await fetch("/job")).json();
+const { width: W, height: H } = job;
+document.getElementById("title").textContent = job.name;
+const canvas = document.getElementById("c");
+const renderer = makeRenderer(W, H, canvas);
+const rc = createRecolor(W, H, false);
+rc.uniforms.uFlip.value = true;
+let cfg = job.config;
+cfg.targets = (cfg.targets ?? []).map(normTarget);
+let frame = null, t = 0, mode = 0;
+
+const draw = () => {
+  rc.setConfig(cfg);
+  rc.setTime(t);
+  rc.uniforms.uShowMask.value = mode;
+  renderer.render(rc.scene, rc.camera);
+};
+
+async function loadFrame() {
+  const r = await fetch(`/frame?t=${t}`);
+  frame = new Uint8Array(await r.arrayBuffer());
+  rc.setFrame(frame);
+  draw();
+}
+
+// ---- time + view mode
+const time = document.getElementById("time");
+time.max = job.duration.toFixed(2);
+let pending;
+time.oninput = () => {
+  t = +time.value;
+  document.getElementById("tlabel").textContent = t.toFixed(1) + "s";
+  clearTimeout(pending);
+  pending = setTimeout(loadFrame, 120);
+};
+document.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => {
+  document.querySelectorAll(".seg button").forEach((x) => x.classList.toggle("on", x === b));
+  mode = +b.dataset.v;
+  draw();
+}));
+addEventListener("keydown", (e) => { if (e.code === "Space" && !e.repeat && e.target.tagName !== "INPUT") { mode = 2; draw(); e.preventDefault(); } });
+addEventListener("keyup", (e) => { if (e.code === "Space") { mode = +document.querySelector(".seg .on").dataset.v; draw(); } });
+
+// ---- colour picking
+function rgb2hsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) { h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+  return [h, mx ? d / mx : 0, mx];
+}
+function sample(x, y, rad = 6) {
+  let cx = 0, cy = 0, s = 0, v = 0, n = 0;
+  for (let yy = Math.max(0, y - rad); yy <= Math.min(H - 1, y + rad); yy++)
+    for (let xx = Math.max(0, x - rad); xx <= Math.min(W - 1, x + rad); xx++) {
+      const i = (yy * W + xx) * 4;
+      const [h, ss, vv] = rgb2hsv(frame[i], frame[i + 1], frame[i + 2]);
+      cx += Math.cos(h * Math.PI / 180) * ss; cy += Math.sin(h * Math.PI / 180) * ss; s += ss; v += vv; n++;
+    }
+  return [(Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360, s / n, v / n];
+}
+canvas.onclick = (e) => {
+  if (!frame) return;
+  const r = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) / r.width * W), y = Math.round((e.clientY - r.top) / r.height * H);
+  const [h, s, v] = sample(x, y);
+  const st = document.getElementById("status");
+  st.innerHTML = `(${x}, ${y}) sắc ${h.toFixed(0)}° · S ${s.toFixed(2)} · V ${v.toFixed(2)}`;
+  if (s < 0.12) { st.innerHTML += " — màu gần trắng/xám/đen, đổi theo sắc không ăn (cần vùng che)"; return; }
+  if (cfg.targets.length >= 8) { st.innerHTML += " — tối đa 8 màu"; return; }
+  cfg.targets.push(normTarget({
+    name: `màu ${cfg.targets.length + 1}`, from: Math.round(h), to: Math.round((h + 150) % 360),
+    sat: [+(Math.max(0.05, s * 0.25)).toFixed(2), +(Math.max(0.12, s * 0.55)).toFixed(2)],
+  }));
+  renderTargets();
+  draw();
+};
+
+// ---- target cards
+const sw = (h, s = 0.75, v = 0.9) => `<span class="sw" style="background:hsl(${h},${s * 100}%,${v * 55}%)"></span>`;
+function slider(label, val, min, max, step, onInput) {
+  const row = document.createElement("label");
+  row.className = "row";
+  row.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><span>${val}</span>`;
+  const [_, inp, out] = row.children;
+  inp.oninput = () => { out.textContent = inp.value; onInput(+inp.value); draw(); };
+  return row;
+}
+function renderTargets() {
+  const box = document.getElementById("targets");
+  box.innerHTML = "";
+  cfg.targets.forEach((tg, i) => {
+    const c = document.createElement("div");
+    c.className = "card";
+    c.innerHTML = `<div style="display:flex;gap:6px;align-items:center">
+      <input type="checkbox" ${tg.enabled ? "checked" : ""} title="bật/tắt">
+      <input type="text" value="${tg.name}">
+      <span>${sw(tg.from)}→<span class="to">${sw(tg.to)}</span></span>
+      <button title="xoá">✕</button></div>`;
+    const [en, name, , del] = c.firstElementChild.children;
+    en.onchange = () => { tg.enabled = en.checked; draw(); };
+    name.oninput = () => (tg.name = name.value);
+    del.onclick = () => { cfg.targets.splice(i, 1); renderTargets(); draw(); };
+    const toSw = c.querySelector(".to");
+    const hue = slider("Màu mới (sắc)", tg.to, 0, 359, 1, (v) => { tg.to = v; toSw.innerHTML = sw(v); });
+    hue.children[1].classList.add("hue");
+    c.append(
+      hue,
+      slider("Màu gốc (sắc)", tg.from, 0, 359, 1, (v) => (tg.from = v)),
+      slider("Độ rộng dải", tg.range[0], 2, 60, 1, (v) => (tg.range = [v, v + 16])),
+      slider("Bỏ màu nhạt <", tg.sat[1], 0.02, 0.9, 0.01, (v) => (tg.sat = [v * 0.45, v])),
+      slider("Độ đậm ×", tg.satK, 0, 2, 0.05, (v) => (tg.satK = v)),
+      slider("Độ sáng ×", tg.valK, 0.3, 1.6, 0.05, (v) => (tg.valK = v)),
+    );
+    const prot = document.createElement("label");
+    prot.innerHTML = `<input type="checkbox" ${tg.protectSkin ? "checked" : ""}> Giữ nguyên màu da`;
+    prot.firstChild.onchange = (e) => { tg.protectSkin = e.target.checked; draw(); };
+    c.append(prot);
+    box.append(c);
+  });
+}
+renderTargets();
+
+// ---- save / render
+const save = async () => {
+  const r = await (await fetch("/save", { method: "POST", body: JSON.stringify(cfg, null, 2) })).json();
+  document.getElementById("status").textContent = `Đã lưu ${r.saved}`;
+};
+document.getElementById("save").onclick = save;
+async function render(span) {
+  await save();
+  const msg = document.getElementById("renderMsg");
+  msg.textContent = "Đang render... (xem tiến độ ở cửa sổ lệnh)";
+  const r = await (await fetch("/render", { method: "POST", body: JSON.stringify(span) })).json();
+  msg.textContent = r.error ? `Lỗi: ${r.error}` : `Xong: ${r.output} (${r.frames} frame, ${r.seconds.toFixed(0)}s, ${r.gpu ? "iGPU" : "CPU"})`;
+}
+document.getElementById("test").onclick = () => render({ start: t, duration: 5 });
+document.getElementById("full").onclick = () => render({});
+
+await loadFrame();
+</script>
+</body>
+</html>

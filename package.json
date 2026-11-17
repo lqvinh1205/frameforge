@@ -1,0 +1,17 @@
+{
+  "name": "frameforge",
+  "version": "1.0.0",
+  "description": "Three.js + ffmpeg: recolour real video, render 3D films from scripts",
+  "scripts": {
+    "ff": "node ff.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.5.4",
+    "puppeteer-core": "^23.11.1",
+    "three": "^0.170.0"
+  }
+}
